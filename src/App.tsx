@@ -1,16 +1,70 @@
 import { useState } from "react";
 import { ethers } from "ethers";
-import logo from "./logo.svg";
 import "./App.css";
 import Greeter from "./artifacts/contracts/Greeter.sol/Greeter.json";
+import Token from "./artifacts/contracts/Token.sol/Token.json";
 import detectEthereumProvider from "@metamask/detect-provider";
 import { ExternalProvider } from "@ethersproject/providers";
-import { CustomButton, StyledButton } from "./components/CustomButton";
+
+import styled, { css } from "styled-components";
+
+export const StyledButton = styled.button(
+  ({ theme }) => css`
+    color: black;
+    font-size: 30px;
+    width: fit-content;
+    white-space: nowrap;
+    cursor: pointer;
+    text-align: center;
+    height: 200px;
+    background-color: yellow;
+    border: 20px solid blue;
+    transition: all 0.5s ease;
+
+    &:hover {
+      background-color: blue;
+      border: 20px solid yellow;
+      color: white;
+    }
+  `
+);
 
 const greeterAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+const tokenAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
 
 function App() {
   const [greeting, setGreetingValue] = useState<string>("");
+  const [userAccount, setUserAccount] = useState<string>("");
+  const [amount, setAmount] = useState<string>("");
+
+  const getBalance = async () => {
+    const ethereum = (await detectEthereumProvider()) as ExternalProvider;
+
+    if (ethereum.isMetaMask) {
+      const [account] = await ethereum.request?.({
+        method: "eth_requestAccounts",
+      });
+      const provider = new ethers.providers.Web3Provider(ethereum);
+      const contract = new ethers.Contract(tokenAddress, Token.abi, provider);
+      const balance = await contract.balanceOf(account);
+      console.log("Balance: ", balance.toString());
+    }
+  };
+
+  const sendCoins = async () => {
+    const ethereum = (await detectEthereumProvider()) as ExternalProvider;
+
+    if (ethereum.isMetaMask) {
+      await requestAccount();
+      const provider = new ethers.providers.Web3Provider(ethereum);
+      const signer = provider.getSigner();
+      const contract = new ethers.Contract(tokenAddress, Token.abi, signer);
+      const transation = await contract.transfer(userAccount, parseInt(amount));
+      await transation.wait();
+      console.log(`${amount} Coins successfully sent to ${userAccount}`);
+    }
+  };
+
   const requestAccount = async () => {
     const ethereum = (await detectEthereumProvider()) as ExternalProvider;
 
@@ -96,7 +150,30 @@ function App() {
               value={greeting}
             />
           </div>
-          <StyledButton>Request account</StyledButton>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            height: "fit-content",
+            width: "100%",
+            justifyContent: "space-around",
+            alignItems: "center",
+          }}
+        >
+          <StyledButton onClick={getBalance}>Get balance</StyledButton>
+          <StyledButton onClick={sendCoins}>Send coins</StyledButton>
+          <input
+            style={{ marginTop: "20px", fontSize: "40px" }}
+            onChange={(e) => setUserAccount(e.target.value)}
+            placeholder="Account ID"
+            value={userAccount}
+          />
+          <input
+            style={{ marginTop: "20px", fontSize: "40px" }}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="Amount"
+            value={amount}
+          />
         </div>
         <p style={{ color: "white", fontSize: "40px", fontStyle: "italic" }}>
           Bottom

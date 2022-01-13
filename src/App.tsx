@@ -15,6 +15,7 @@ export const StyledButton = styled.button(
     width: fit-content;
     white-space: nowrap;
     cursor: pointer;
+    height: 100px;
     text-align: center;
     height: 200px;
     background-color: yellow;
@@ -109,7 +110,6 @@ function App() {
 
   return (
     <div className="App">
-      {/* <header className="App-header"></header> */}
       <div
         style={{
           height: "100vh",

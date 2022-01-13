@@ -9,21 +9,20 @@ import video from "../../videos/votingVideo.mp4";
 import {
   BackgroundVideo,
   ButtonsContainer,
-  MiddleContentRoot,
   StyledButton,
-} from "../MiddleContent/MiddleContent.styles";
+  WelcomePageRoot,
+} from "./WelcomePage.styles";
+import { useHistory } from "react-router-dom";
 
 const greeterAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 const tokenAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
 
 export const WelcomePage = () => {
+  const history = useHistory();
+
   const [greeting, setGreetingValue] = useState<string>("");
   const [userAccount, setUserAccount] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
-
-  useEffect(() => {
-    console.log("Gets mounted");
-  }, []);
 
   const getBalance = async () => {
     const ethereum = (await detectEthereumProvider()) as ExternalProvider;
@@ -95,15 +94,21 @@ export const WelcomePage = () => {
     }
   };
 
+  const onBallotManagerRedirect = () => history.push("/ballotManager");
+
+  const onVoteRedirect = () => history.push("/vote");
+
   return (
-    <MiddleContentRoot>
+    <WelcomePageRoot>
       <BackgroundVideo playsInline autoPlay muted loop>
         <source src={video}></source>
       </BackgroundVideo>
       <ButtonsContainer>
-        <StyledButton>Ballot manager</StyledButton>
-        <StyledButton>Voter</StyledButton>
+        <StyledButton onClick={onBallotManagerRedirect}>
+          Ballot manager
+        </StyledButton>
+        <StyledButton onClick={onVoteRedirect}>Voter</StyledButton>
       </ButtonsContainer>
-    </MiddleContentRoot>
+    </WelcomePageRoot>
   );
 };

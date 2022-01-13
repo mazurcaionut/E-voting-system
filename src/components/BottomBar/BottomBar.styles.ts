@@ -6,6 +6,7 @@ export const BottomBarRoot = styled.div(
     min-height: 100px;
     background-color: black;
     text-align: left;
+    display: flex;
     color: white;
   `
 );

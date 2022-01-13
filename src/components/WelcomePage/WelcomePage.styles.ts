@@ -1,6 +1,6 @@
 import styled, { css } from "styled-components";
 
-export const MiddleContentRoot = styled.div(
+export const WelcomePageRoot = styled.div(
   ({ theme }) => css`
     flex: 1;
     position: relative;

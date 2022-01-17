@@ -8,6 +8,7 @@
     "@metamask/detect-provider": "^1.2.0",
     "@mui/material": "^5.2.8",
     "@mui/styled-engine-sc": "^5.1.0",
+    "@mui/styled-engine": "npm:@mui/styled-engine-sc@latest",
     "@nomiclabs/hardhat-ethers": "^2.0.3",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@openzeppelin/contracts": "^4.4.1",
@@ -29,6 +30,9 @@
     "styled-components": "^5.3.3",
     "typescript": "^4.4.2",
     "web-vitals": "^2.1.0"
+  },
+  "resolutions": {
+    "@mui/styled-engine": "npm:@mui/styled-engine-sc@latest"
   },
   "scripts": {
     "start": "react-scripts start",

@@ -5,6 +5,8 @@ import {
   BMTitle,
   NewBallotContainer,
   NewBallotContract,
+  StyledMUIButton,
+  StyledMUITextField,
   StyledTextField,
 } from "./BallotManager.styles";
 import { Button, TextField } from "@mui/material";
@@ -35,7 +37,25 @@ export const BallotManager = (props: IBallotManagerProps) => {
             {props.voter ? `Ballot contract` : `New Ballot Contract`}
           </NewBallotContract>
           <BallotDetailsContainer>
-            <TextField
+            <StyledMUITextField
+              id="outline-basic"
+              label="Ballot Address"
+              variant="outlined"
+              value={ballotName}
+              onChange={onBallotNameChange}
+            />
+
+            {props.voter ? null : (
+              <StyledMUITextField
+                id="outline-basic"
+                label="Proposal"
+                variant="outlined"
+                value={proposal}
+                onChange={onProposalChange}
+              />
+            )}
+
+            {/* <TextField
               id="outline-basic"
               label="Ballot Address"
               variant="outlined"
@@ -61,14 +81,15 @@ export const BallotManager = (props: IBallotManagerProps) => {
                 }}
                 sx={{ marginBottom: "10px", marginTop: "10px" }}
               />
-            )}
+            )} */}
 
-            <Button
+            <StyledMUIButton variant="contained">Go</StyledMUIButton>
+            {/* <Button
               variant="contained"
               sx={{ width: "100px", fontSize: "30px", height: "50px" }}
             >
               Go
-            </Button>
+            </Button> */}
           </BallotDetailsContainer>
         </NewBallotContainer>
       </BMCenterSection>

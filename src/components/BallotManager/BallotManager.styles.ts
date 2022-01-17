@@ -1,13 +1,24 @@
 import { Button, TextField } from "@mui/material";
 import styled, { css } from "styled-components";
 
+export const ElectionMetadata = styled.div(
+  ({ theme }) => css`
+    display: flex;
+    width: 100%;
+    height: fit-content;
+    justify-content: space-between;
+    box-sizing: border-box;
+    margin-top: 20px;
+  `
+);
+
 interface IButton {
   large?: boolean;
 }
 
 export const StyledMUIButton = styled(Button)<IButton>(
   ({ theme, large }) => css`
-    width: 100px;
+    width: fit-content;
     font-size: 30px;
     height: 50px;
 
@@ -43,6 +54,41 @@ export const BallotManagerRoot = styled.div(
     flex: 1;
     display: flex;
     justify-content: center;
+  `
+);
+
+export const ContractDetails = styled.div(
+  ({ theme }) => css`
+    display: flex;
+    flex-direction: column;
+    height: fit-content;
+    padding: 10px;
+    box-sizing: border-box;
+    width: 45%;
+
+    div {
+      margin-bottom: 7px;
+    }
+
+    span {
+      margin-bottom: 3px;
+      margin-top: 3px;
+    }
+
+    p {
+      margin: 0;
+    }
+  `
+);
+
+export const SpanLines = styled.span(
+  ({ theme }) => css`
+    display: flex;
+
+    p:first-of-type {
+      font-weight: bold;
+      margin-right: 10px;
+    }
   `
 );
 

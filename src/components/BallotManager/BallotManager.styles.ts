@@ -1,11 +1,20 @@
 import { Button, TextField } from "@mui/material";
 import styled, { css } from "styled-components";
 
-export const StyledMUIButton = styled(Button)(
-  ({ theme }) => css`
+interface IButton {
+  large?: boolean;
+}
+
+export const StyledMUIButton = styled(Button)<IButton>(
+  ({ theme, large }) => css`
     width: 100px;
     font-size: 30px;
     height: 50px;
+
+    ${large &&
+    css`
+      height: 20px;
+    `}
   `
 );
 

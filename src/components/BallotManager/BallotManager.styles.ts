@@ -1,6 +1,29 @@
 import { Button, TextField } from "@mui/material";
 import styled, { css } from "styled-components";
 
+export const VotersSection = styled.div(
+  ({ theme }) => css`
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    padding: 10px;
+    box-sizing: border-box;
+  `
+);
+
+export const TopGridFilter = styled.div(
+  ({ theme }) => css`
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: row;
+    height: fit-content;
+    justify-content: space-between;
+  `
+);
+
 export const ElectionMetadata = styled.div(
   ({ theme }) => css`
     display: flex;
@@ -13,18 +36,19 @@ export const ElectionMetadata = styled.div(
 );
 
 interface IButton {
-  large?: boolean;
+  small?: boolean;
 }
 
 export const StyledMUIButton = styled(Button)<IButton>(
-  ({ theme, large }) => css`
+  ({ theme, small }) => css`
     width: fit-content;
-    font-size: 30px;
-    height: 50px;
+    font-size: 15px;
+    height: 30px;
 
-    ${large &&
+    ${small &&
     css`
       height: 20px;
+      font-size: 10px;
     `}
   `
 );
@@ -81,9 +105,41 @@ export const ContractDetails = styled.div(
   `
 );
 
-export const SpanLines = styled.span(
+export const EntriesSpan = styled.span(
   ({ theme }) => css`
     display: flex;
+    flex-direction: row;
+    align-items: center;
+
+    p {
+      margin: 0;
+    }
+  `
+);
+
+export const AddVoterFlex = styled.div(
+  ({ theme }) => css`
+    display: flex;
+    margin-top: 15px;
+    margin-bottom: 15px;
+    flex-direction: row;
+    justify-content: space-between;
+  `
+);
+
+interface ISpanLine {
+  withButton?: boolean;
+}
+
+export const SpanLines = styled.span<ISpanLine>(
+  ({ theme, withButton }) => css`
+    display: flex;
+    width: 100%;
+
+    ${withButton &&
+    css`
+      justify-content: space-between;
+    `}
 
     p:first-of-type {
       font-weight: bold;

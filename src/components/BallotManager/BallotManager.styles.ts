@@ -1,5 +1,33 @@
-import { TextField } from "@mui/material";
+import { Button, TextField } from "@mui/material";
 import styled, { css } from "styled-components";
+
+export const StyledMUIButton = styled(Button)(
+  ({ theme }) => css`
+    width: 100px;
+    font-size: 30px;
+    height: 50px;
+  `
+);
+
+export const StyledMUITextField = styled(TextField)(
+  ({ theme }) => css`
+    margin-bottom: 10px;
+    margin-top: 10px;
+
+    /* & > label {
+      font-size: 20px;
+    } */
+
+    /* 
+    .label {
+      font-size: 20px;
+    }
+
+    .input {
+      font-size: 20px;
+    } */
+  `
+);
 
 export const BallotManagerRoot = styled.div(
   ({ theme }) => css`

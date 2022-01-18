@@ -64,6 +64,31 @@ export const BallotManager = (props: IBallotManagerProps) => {
   const [pageSizeOption, setPageSizeOption] = useState(5);
   const [lastVoterAddress, setLastVoterAddress] = useState(false);
 
+  const onWatchVodeDone = () =>
+    ballotContract.events
+      .voteDone(
+        {},
+        async (error: any, event: { returnValues: { voter: any } }) => {
+          console.log(event.returnValues.voter);
+          // updateNewVote(event.returnValues.voter);
+
+          await updateTotalVotes(ballotContract);
+
+          setVotersArray((votersArray) =>
+            votersArray.map((m) => ({
+              ...m,
+              status:
+                m.address == event.returnValues.voter ? "Voted" : m.status,
+            }))
+          );
+        }
+      )
+      .on("data", (event: any) => {})
+      .on("changed", (event: any) => {
+        // remove event from local database
+      })
+      .on("error", console.error);
+
   const onWatchVoteEnd = () =>
     ballotContract.events
       .voteEnded(
@@ -133,6 +158,7 @@ export const BallotManager = (props: IBallotManagerProps) => {
   useEffect(() => {
     if (deployed) {
       onWatchVoteEnd();
+      onWatchVodeDone();
       onWatchVoterAdded();
       onWatchVoteStarted();
       // ballotContract.on("voterAdded", listener);
@@ -149,17 +175,6 @@ export const BallotManager = (props: IBallotManagerProps) => {
     { field: "status", headerName: "Status", flex: 0.5 },
   ] as GridColDef[];
 
-  const rows = [
-    { id: 1, address: "a", name: "ddd", status: "55" },
-    { id: 2, address: "a", name: "ddd", status: "55" },
-    { id: 3, address: "a", name: "ddd", status: "55" },
-    { id: 4, address: "a", name: "ddd", status: "55" },
-    { id: 5, address: "a", name: "ddd", status: "55" },
-    { id: 6, address: "a", name: "ddd", status: "55" },
-    { id: 7, address: "a", name: "ddd", status: "55" },
-    { id: 8, address: "a", name: "ddd", status: "55" },
-  ];
-
   const loadVoter = async (voterAddress: string) =>
     await ballotContract.methods
       .voterRegister(voterAddress)
@@ -167,15 +182,19 @@ export const BallotManager = (props: IBallotManagerProps) => {
       .then((result: { voted: any; voterName: any }) => {
         console.log(result);
 
-        setVotersArray((votersArray) => [
-          ...votersArray,
-          {
-            id: (votersArray.length + 1).toString(),
-            address: voterAddress,
-            name: result.voterName,
-            status: result.voted ? "Voted" : "Not Voted",
-          },
-        ]);
+        setVotersArray((votersArray) =>
+          votersArray.some((m) => m.address === voterAddress)
+            ? votersArray
+            : [
+                ...votersArray,
+                {
+                  id: (votersArray.length + 1).toString(),
+                  address: voterAddress,
+                  name: result.voterName,
+                  status: result.voted ? "Voted" : "Not Voted",
+                },
+              ]
+        );
       });
 
   const updateBallotOfficialName = async (ballot: any) =>
@@ -256,13 +275,13 @@ export const BallotManager = (props: IBallotManagerProps) => {
         gasPrice: gasPrice,
       })
       .on("transactionHash", (hash: any) => {
-        console.log("a");
+        console.log("Transaction hash for END VOTING");
       })
       .on("receipt", (receipt: any) => {
-        console.log("b");
+        console.log("Receipt for END VOTING");
       })
       .on("confirmation", (confirmationNumber: any, receipt: any) => {
-        console.log("c");
+        console.log("Confirmation  for END VOTING");
       })
       .on("error", console.error);
   };
@@ -289,13 +308,13 @@ export const BallotManager = (props: IBallotManagerProps) => {
         gasPrice: gasPrice,
       })
       .on("transactionHash", (hash: any) => {
-        console.log("a");
+        console.log("Transaction hash for START VOTING");
       })
       .on("receipt", (receipt: any) => {
-        console.log("b");
+        console.log("Receipt for START VOTING");
       })
       .on("confirmation", (confirmationNumber: any, receipt: any) => {
-        console.log("c");
+        console.log("Confirmation for START VOTING");
       })
       .on("error", console.error);
   };
@@ -303,11 +322,7 @@ export const BallotManager = (props: IBallotManagerProps) => {
   const onDeployClick = async () => {
     setClicked(true);
     const web3 = new Web3(Web3.givenProvider || "ws://localhost:8545");
-    // web3.eth.Contract
-    // Contract.setProvider(Web3.givenProvider || "ws://localhost:8545")
-    // if (window.ethereum) {
-    // }
-    // const web3 = new Web3();
+
     let initialBallotContract = new web3.eth.Contract(Voting.abi as AbiItem[]);
     const accountAddress = web3.givenProvider.selectedAddress;
 
@@ -326,14 +341,14 @@ export const BallotManager = (props: IBallotManagerProps) => {
           gasPrice: gasPrice,
         },
         (error, transactionHash) => {
-          console.log("Transaction hash: ", transactionHash);
+          console.log("Transaction hash for deployment: ", transactionHash);
         }
       )
       .on("error", (error) => {
-        console.log("b");
+        console.log("Error for deploying");
       })
       .on("transactionHash", (transactionHash) => {
-        console.log("c");
+        console.log("transaction hash for deployment again");
       })
       .on("receipt", async (receipt) => {
         console.log("Finally deployed");
@@ -392,13 +407,13 @@ export const BallotManager = (props: IBallotManagerProps) => {
         gasPrice: gasPrice,
       })
       .on("transactionHash", (hash: any) => {
-        console.log("a");
+        console.log("Transaction hash for adding voter");
       })
       .on("receipt", (receipt: any) => {
-        console.log("b");
+        console.log("Receipt for adding voter");
       })
       .on("confirmation", (confirmationNumber: any, receipt: any) => {
-        console.log("c");
+        console.log("Confirmation for adding voter");
       })
       .on("error", console.error);
   };

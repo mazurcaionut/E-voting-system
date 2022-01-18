@@ -84,8 +84,12 @@ export const BallotManagerRoot = styled.div(
   `
 );
 
-export const ContractDetails = styled.div(
-  ({ theme }) => css`
+interface IContractDetails {
+  voter?: boolean;
+}
+
+export const ContractDetails = styled.div<IContractDetails>(
+  ({ theme, voter }) => css`
     display: flex;
     flex-direction: column;
     height: fit-content;
@@ -94,6 +98,12 @@ export const ContractDetails = styled.div(
     padding: 10px;
     box-sizing: border-box;
     width: 45%;
+
+    ${voter &&
+    css`
+      width: 100%;
+      margin-top: 15px;
+    `}
 
     div {
       margin-bottom: 7px;
@@ -134,10 +144,11 @@ export const AddVoterFlex = styled.div(
 
 interface ISpanLine {
   withButton?: boolean;
+  doVote?: boolean;
 }
 
 export const SpanLines = styled.span<ISpanLine>(
-  ({ theme, withButton }) => css`
+  ({ theme, withButton, doVote }) => css`
     display: flex;
     width: 100%;
 
@@ -145,6 +156,12 @@ export const SpanLines = styled.span<ISpanLine>(
     css`
       justify-content: space-between;
     `}
+
+    ${doVote &&
+    css`
+      margin-top: 20px !important;
+    `}
+
 
     p:first-of-type {
       font-weight: bold;

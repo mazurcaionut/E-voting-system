@@ -25,7 +25,13 @@ import {
   SelectChangeEvent,
   TextField,
 } from "@mui/material";
-import React, { ChangeEvent, useEffect, useRef, useState } from "react";
+import React, {
+  ChangeEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useETHAccount } from "../../customHooks/useETHAccount";
 import Voting from "../../artifacts/contracts/Voting.sol/Ballot.json";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
@@ -33,6 +39,7 @@ import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import { AbiItem } from "web3-utils";
 import Web3 from "web3";
 import { SearchOutlined } from "@mui/icons-material";
+import { Contract, ethers } from "ethers";
 
 interface IBallotManagerProps {
   voter?: boolean;
@@ -50,6 +57,7 @@ export const BallotManager = (props: IBallotManagerProps) => {
   const [proposal, setProposal] = useState("Should we re-elect Jack?");
   const { loadingA } = useETHAccount();
   const [ballotContract, setBallotContract] = useState<any | null>(null);
+  const [ethersContract, setEthersContract] = useState<Contract | null>(null);
   const [senderAccountAddress, setSenderAccountAddress] = useState("");
   const [ballotContractAddress, setBallotContractAddress] = useState("");
   const [newVoterAddress, setNewVoterAddress] = useState("");
@@ -119,15 +127,6 @@ export const BallotManager = (props: IBallotManagerProps) => {
             setLastVoterAddress(event.returnValues.voter);
             await loadVoter(event.returnValues.voter);
           }
-          //strange hack: this event fires twice for some reasons
-          //so I save the last voter address and suppress it if
-          //it is the same as the previous one :P
-          // if (lastVoteAdded != event.returnValues.voter){
-          //     loadVoter(Ballot, event.returnValues.voter);
-          //     lastVoteAdded = event.returnValues.voter;
-          // }
-
-          // $("#loaderNewVoter").hide();
         }
       )
       .on("data", (event: any) => {})
@@ -155,18 +154,82 @@ export const BallotManager = (props: IBallotManagerProps) => {
       .on("error", console.error);
   };
 
+  const ethersListenerAdded = useCallback(
+    async (event: { returnValues: { voter: any } }) => {
+      // handle the click event
+      console.log("Added voter: ", event.returnValues.voter);
+
+      await updateTotalVoters(ballotContract);
+
+      if (lastVoterAddress != event.returnValues.voter) {
+        setLastVoterAddress(event.returnValues.voter);
+        await loadVoter(event.returnValues.voter);
+      }
+    },
+    []
+  );
+
+  const ethersListenerStarted = useCallback(async (event: any) => {
+    // handle the click event
+    console.log("State is changing");
+    console.log(event.event); // same results as the optional callback above
+
+    await updateElectionState(ballotContract);
+  }, []);
+
+  const ethersListenerDone = useCallback(
+    async (event: { returnValues: { voter: any } }) => {
+      console.log(event.returnValues.voter);
+      // updateNewVote(event.returnValues.voter);
+
+      await updateTotalVotes(ballotContract);
+
+      setVotersArray((votersArray) =>
+        votersArray.map((m) => ({
+          ...m,
+          status: m.address == event.returnValues.voter ? "Voted" : m.status,
+        }))
+      );
+    },
+    []
+  );
+
+  const ethersListenerEnded = useCallback(
+    async (event: { returnValues: { finalResult: any } }) => {
+      console.log(event.returnValues.finalResult);
+
+      await updateElectionState(ballotContract);
+      await updateFinalResult(ballotContract);
+    },
+    []
+  );
+
   useEffect(() => {
     if (deployed) {
+      // ethersContract?.on("voterAdded", ethersListenerAdded);
+      // ethersContract?.on("voteStarted", ethersListenerStarted);
+      // ethersContract?.on("voteEnded", ethersListenerEnded);
+      // ethersContract?.on("voteDone", ethersListenerDone);
       onWatchVoteEnd();
       onWatchVodeDone();
       onWatchVoterAdded();
       onWatchVoteStarted();
+
+      return () => {
+        ethersContract?.removeAllListeners();
+      };
       // ballotContract.on("voterAdded", listener);
       // return () => {
       //   ballotContract.off("voterAdded", listener);
       // };
     }
-  }, [deployed]);
+  }, [
+    deployed,
+    // onWatchVodeDone,
+    // onWatchVoteEnd,
+    // onWatchVoteStarted,
+    // onWatchVoterAdded,
+  ]);
 
   const columns = [
     { field: "id", headerName: "ID", flex: 0.2 },
@@ -362,6 +425,16 @@ export const BallotManager = (props: IBallotManagerProps) => {
         );
 
         setBallotContract(deployedContract);
+
+        const provider = new ethers.providers.Web3Provider(Web3.givenProvider);
+
+        const ethersContract = new ethers.Contract(
+          receipt.contractAddress as string,
+          Voting.abi,
+          provider
+        );
+
+        setEthersContract(ethersContract);
 
         await updateBallotOfficialName(deployedContract);
         await updateBallotProposal(deployedContract);

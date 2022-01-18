@@ -43,33 +43,6 @@ export const WelcomePage = () => {
   const sendCoins = async () => {
     const ethereum = (await detectEthereumProvider()) as ExternalProvider;
 
-    // const web3 = new Web3();
-
-    // // web3.currentProvider;
-
-    // let ballotContract = new web3.eth.Contract(Voting.abi as AbiItem[]);
-
-    // const gasPrice = await web3.eth.getGasPrice();
-
-    // ballotContract
-    //   .deploy({
-    //     data: Voting.bytecode,
-    //     arguments: [],
-    //   })
-    //   .send(
-    //     {
-    //       from: "",
-    //       gas: 1308700,
-    //       gasPrice: gasPrice,
-    //     },
-    //     (error, transactionHash) => {}
-    //   )
-    //   .on("error", (error) => {})
-    //   .on("transactionHash", (transactionHash) => {})
-    //   .on("receipt", (receipt) => {
-    //     receipt.contractAddress;
-    //   });
-
     if (ethereum.isMetaMask) {
       await requestAccount();
       const provider = new ethers.providers.Web3Provider(ethereum);

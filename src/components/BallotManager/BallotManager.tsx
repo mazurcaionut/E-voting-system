@@ -53,8 +53,8 @@ interface IVoter {
 }
 
 export const BallotManager = (props: IBallotManagerProps) => {
-  const [ballotName, setBallotName] = useState("Chairman");
-  const [proposal, setProposal] = useState("Should we re-elect Jack?");
+  const [ballotName, setBallotName] = useState("");
+  const [proposal, setProposal] = useState("");
   const { loadingA } = useETHAccount();
   const [ballotContract, setBallotContract] = useState<any | null>(null);
   const [ethersContract, setEthersContract] = useState<Contract | null>(null);
@@ -513,7 +513,7 @@ export const BallotManager = (props: IBallotManagerProps) => {
   return (
     <BallotManagerRoot>
       <BMCenterSection>
-        {deployed || clicked ? null : (
+        {deployed || clicked || loadingA ? null : (
           <>
             <BMTitle>{props.voter ? `Vote` : `Ballot Manager`}</BMTitle>
             <NewBallotContainer>
@@ -544,11 +544,14 @@ export const BallotManager = (props: IBallotManagerProps) => {
                 <StyledMUIButton variant="contained" onClick={onDeployClick}>
                   Deploy
                 </StyledMUIButton>
-                {loadingA ? <CircularProgress /> : null}
               </BallotDetailsContainer>
             </NewBallotContainer>
           </>
         )}
+
+        {loadingA ? (
+          <CircularProgress size={"60px"} sx={{ alignSelf: "center" }} />
+        ) : null}
 
         {clicked && !deployed ? (
           <CircularProgress

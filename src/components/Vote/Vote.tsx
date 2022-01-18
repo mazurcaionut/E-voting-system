@@ -236,7 +236,7 @@ export const Vote = () => {
   return (
     <BallotManagerRoot>
       <BMCenterSection>
-        {electionFetched ? null : (
+        {electionFetched || loadingA ? null : (
           <>
             <BMTitle>Vote</BMTitle>
             <NewBallotContainer>
@@ -256,12 +256,14 @@ export const Vote = () => {
                 >
                   Join election
                 </StyledMUIButton>
-                {/* {loadingA ? <CircularProgress /> : null} */}
               </BallotDetailsContainer>
             </NewBallotContainer>
           </>
         )}
 
+        {loadingA ? (
+          <CircularProgress size={"60px"} sx={{ alignSelf: "center" }} />
+        ) : null}
         {/* {clicked && !electionFetched ? (
           <CircularProgress
             sx={{ marginTop: "10px", alignSelf: "center" }}

@@ -15,6 +15,7 @@ export const BottomBarRoot = styled.div(
 export const TitleBotom = styled.p(
   ({ theme }) => css`
     margin: 20px;
+    width: 33%;
     /* font-style: italic; */
     font-size: 20px;
 
@@ -28,8 +29,10 @@ export const TitleBotom = styled.p(
 export const SocialMediaIconsContainer = styled.span(
   ({ theme }) => css`
     display: flex;
+    width: 33%;
     flex-direction: row;
     height: 100%;
+    justify-content: center;
     align-items: center;
   `
 );
@@ -37,9 +40,11 @@ export const SocialMediaIconsContainer = styled.span(
 export const BottomRightSpan = styled.span(
   ({ theme }) => css`
     /* margin: 20px; */
-    margin-right: 15px;
+    width: 33%;
+    margin-right: 10px;
     font-size: 20px;
     display: flex;
+    justify-content: flex-end;
     flex-direction: row;
   `
 );

@@ -6,6 +6,8 @@ export const VotersSection = styled.div(
     display: flex;
     width: 100%;
     flex-direction: column;
+    border: 5px solid #c0c0c0;
+
     padding: 10px;
     box-sizing: border-box;
   `
@@ -32,6 +34,7 @@ export const ElectionMetadata = styled.div(
     justify-content: space-between;
     box-sizing: border-box;
     margin-top: 20px;
+    margin-bottom: 20px;
   `
 );
 
@@ -86,6 +89,8 @@ export const ContractDetails = styled.div(
     display: flex;
     flex-direction: column;
     height: fit-content;
+    border: 5px solid #c0c0c0;
+
     padding: 10px;
     box-sizing: border-box;
     width: 45%;
@@ -174,7 +179,7 @@ export const BMTitle = styled.p(
 export const NewBallotContainer = styled.div(
   ({ theme }) => css`
     border: 5px solid #c0c0c0;
-    background-color: #dcdcdc;
+    /* background-color: #dcdcdc; */
     box-sizing: border-box;
     width: 100%;
     padding: 10px;

@@ -38,6 +38,13 @@ interface IBallotManagerProps {
   voter?: boolean;
 }
 
+interface IVoter {
+  id: string;
+  address: string;
+  name: string;
+  status: string;
+}
+
 export const BallotManager = (props: IBallotManagerProps) => {
   const [ballotName, setBallotName] = useState("Chairman");
   const [proposal, setProposal] = useState("Should we re-elect Jack?");
@@ -45,7 +52,8 @@ export const BallotManager = (props: IBallotManagerProps) => {
   const [ballotContract, setBallotContract] = useState<any | null>(null);
   const [senderAccountAddress, setSenderAccountAddress] = useState("");
   const [ballotContractAddress, setBallotContractAddress] = useState("");
-  const [newVoterAddres, setNewVoterAddress] = useState("");
+  const [newVoterAddress, setNewVoterAddress] = useState("");
+  const [votersArray, setVotersArray] = useState<IVoter[]>([]);
   const [newVoterName, setNewVoterName] = useState("");
   const [electionState, setElectionState] = useState("");
   const [deployed, setDeployed] = useState(false);
@@ -54,6 +62,85 @@ export const BallotManager = (props: IBallotManagerProps) => {
   const [votersNumber, setVotersNumber] = useState(0);
   const [votes, setVotes] = useState(0);
   const [pageSizeOption, setPageSizeOption] = useState(5);
+  const [lastVoterAddress, setLastVoterAddress] = useState(false);
+
+  const onWatchVoteEnd = () =>
+    ballotContract.events
+      .voteEnded(
+        {},
+        async (error: any, event: { returnValues: { finalResult: any } }) => {
+          console.log(event.returnValues.finalResult);
+
+          await updateElectionState(ballotContract);
+          await updateFinalResult(ballotContract);
+        }
+      )
+      .on("data", (event: any) => {})
+      .on("changed", (event: any) => {
+        // remove event from local database
+      })
+      .on("error", console.error);
+
+  const onWatchVoterAdded = () => {
+    ballotContract.events
+      .voterAdded(
+        {},
+        async (error: any, event: { returnValues: { voter: any } }) => {
+          console.log("Added voter: ", event.returnValues.voter);
+
+          await updateTotalVoters(ballotContract);
+
+          if (lastVoterAddress != event.returnValues.voter) {
+            setLastVoterAddress(event.returnValues.voter);
+            await loadVoter(event.returnValues.voter);
+          }
+          //strange hack: this event fires twice for some reasons
+          //so I save the last voter address and suppress it if
+          //it is the same as the previous one :P
+          // if (lastVoteAdded != event.returnValues.voter){
+          //     loadVoter(Ballot, event.returnValues.voter);
+          //     lastVoteAdded = event.returnValues.voter;
+          // }
+
+          // $("#loaderNewVoter").hide();
+        }
+      )
+      .on("data", (event: any) => {})
+      .on("changed", (event: any) => {
+        // remove event from local database
+      })
+      .on("error", console.error);
+  };
+
+  const onWatchVoteStarted = () => {
+    ballotContract.events
+      .voteStarted({}, async (error: any, event: any) => {
+        console.log("State is changing");
+        console.log(event.event); // same results as the optional callback above
+
+        await updateElectionState(ballotContract);
+      })
+      .on("data", (event: any) => {
+        // console.log(event.event); // same results as the optional callback above
+        // await updateElectionState(ballotContract);
+      })
+      .on("changed", (event: any) => {
+        // remove event from local database
+      })
+      .on("error", console.error);
+  };
+
+  useEffect(() => {
+    if (deployed) {
+      onWatchVoteEnd();
+      onWatchVoterAdded();
+      onWatchVoteStarted();
+      // ballotContract.on("voterAdded", listener);
+      // return () => {
+      //   ballotContract.off("voterAdded", listener);
+      // };
+    }
+  }, [deployed]);
 
   const columns = [
     { field: "id", headerName: "ID", flex: 0.2 },
@@ -72,6 +159,24 @@ export const BallotManager = (props: IBallotManagerProps) => {
     { id: 7, address: "a", name: "ddd", status: "55" },
     { id: 8, address: "a", name: "ddd", status: "55" },
   ];
+
+  const loadVoter = async (voterAddress: string) =>
+    await ballotContract.methods
+      .voterRegister(voterAddress)
+      .call()
+      .then((result: { voted: any; voterName: any }) => {
+        console.log(result);
+
+        setVotersArray((votersArray) => [
+          ...votersArray,
+          {
+            id: (votersArray.length + 1).toString(),
+            address: voterAddress,
+            name: result.voterName,
+            status: result.voted ? "Voted" : "Not Voted",
+          },
+        ]);
+      });
 
   const updateBallotOfficialName = async (ballot: any) =>
     await ballot.methods
@@ -129,9 +234,77 @@ export const BallotManager = (props: IBallotManagerProps) => {
         setVotes(totalVote);
       });
 
+  const onEndVoting = async () => {
+    const web3 = new Web3(Web3.givenProvider || "ws://localhost:8545");
+
+    const gasPrice = await web3.eth.getGasPrice();
+
+    let mygas = 0;
+
+    await ballotContract?.methods
+      .endVote()
+      .estimateGas({ from: senderAccountAddress })
+      .then((gasAmount: any) => {
+        mygas = gasAmount;
+      });
+
+    ballotContract.methods
+      .endVote()
+      .send({
+        from: senderAccountAddress,
+        gas: mygas,
+        gasPrice: gasPrice,
+      })
+      .on("transactionHash", (hash: any) => {
+        console.log("a");
+      })
+      .on("receipt", (receipt: any) => {
+        console.log("b");
+      })
+      .on("confirmation", (confirmationNumber: any, receipt: any) => {
+        console.log("c");
+      })
+      .on("error", console.error);
+  };
+
+  const onStartVoting = async () => {
+    const web3 = new Web3(Web3.givenProvider || "ws://localhost:8545");
+
+    const gasPrice = await web3.eth.getGasPrice();
+
+    let mygas = 0;
+
+    await ballotContract?.methods
+      .startVote()
+      .estimateGas({ from: senderAccountAddress })
+      .then((gasAmount: any) => {
+        mygas = gasAmount;
+      });
+
+    ballotContract.methods
+      .startVote()
+      .send({
+        from: senderAccountAddress,
+        gas: mygas,
+        gasPrice: gasPrice,
+      })
+      .on("transactionHash", (hash: any) => {
+        console.log("a");
+      })
+      .on("receipt", (receipt: any) => {
+        console.log("b");
+      })
+      .on("confirmation", (confirmationNumber: any, receipt: any) => {
+        console.log("c");
+      })
+      .on("error", console.error);
+  };
+
   const onDeployClick = async () => {
     setClicked(true);
     const web3 = new Web3(Web3.givenProvider || "ws://localhost:8545");
+    // web3.eth.Contract
+    // Contract.setProvider(Web3.givenProvider || "ws://localhost:8545")
     // if (window.ethereum) {
     // }
     // const web3 = new Web3();
@@ -170,7 +343,7 @@ export const BallotManager = (props: IBallotManagerProps) => {
 
         const deployedContract = new web3.eth.Contract(
           Voting.abi as AbiItem[],
-          receipt.contractAddress
+          receipt.contractAddress as string
         );
 
         setBallotContract(deployedContract);
@@ -193,14 +366,16 @@ export const BallotManager = (props: IBallotManagerProps) => {
   };
 
   const onAddVoterClick = async () => {
-    if (newVoterAddres === "" || newVoterName === "") {
+    if (newVoterAddress === "" || newVoterName === "") {
       return;
     }
 
+    console.log("GOES HERE");
+
     let mygas = 0;
 
-    await ballotContract.methods
-      .addVoter(newVoterAddres, newVoterName)
+    await ballotContract?.methods
+      .addVoter(newVoterAddress, newVoterName)
       .estimateGas({ from: senderAccountAddress })
       .then((gasAmount: any) => {
         mygas = gasAmount;
@@ -209,8 +384,8 @@ export const BallotManager = (props: IBallotManagerProps) => {
     const web3 = new Web3(Web3.givenProvider || "ws://localhost:8545");
     const gasPrice = await web3.eth.getGasPrice();
 
-    await ballotContract.methods
-      .addVoter(newVoterAddres, newVoterName)
+    await ballotContract?.methods
+      .addVoter(newVoterAddress, newVoterName)
       .send({
         from: senderAccountAddress,
         gas: mygas,
@@ -239,22 +414,13 @@ export const BallotManager = (props: IBallotManagerProps) => {
   const onEntriesSelect = (e: SelectChangeEvent<string>) =>
     setPageSizeOption(parseInt(e.target.value));
 
-  //   const onWatchVoteEnd = () => {
-  //     Ballot.events.voteEnded({
-  //     }, (error, event) => {
-  //         console.log(event.returnValues.finalResult);
-  //         loadState(Ballot);
-  //         loadFinalResult(Ballot);
-  //         $("#loaderStartVote").hide();
-  //         $("#btnEnd").hide();
-  //     })
-  //     .on('data', (event) => {
-  //     })
-  //     .on('changed', (event) => {
-  //         // remove event from local database
-  //     })
-  //     .on('error', console.error)
-  // }
+  const onNewVoterAddressChange = (
+    e: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
+  ) => setNewVoterAddress(e.target.value);
+
+  const onNewVoterNameChange = (
+    e: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
+  ) => setNewVoterName(e.target.value);
 
   return (
     <BallotManagerRoot>
@@ -313,9 +479,24 @@ export const BallotManager = (props: IBallotManagerProps) => {
                     <p>Election state: </p>
                     <p>{electionState}</p>
                   </div>
-                  <StyledMUIButton small variant="contained" onClick={() => {}}>
-                    Start Voting
-                  </StyledMUIButton>
+
+                  {electionState === "Ended" ? null : (
+                    <StyledMUIButton
+                      small
+                      variant="contained"
+                      onClick={
+                        electionState === "Created"
+                          ? onStartVoting
+                          : electionState === "Voting"
+                          ? onEndVoting
+                          : () => {}
+                      }
+                    >
+                      {electionState === "Created"
+                        ? "Start Voting"
+                        : "End vote"}
+                    </StyledMUIButton>
+                  )}
                 </SpanLines>
                 <SpanLines>
                   <p>Ballot Official Name: </p>
@@ -352,31 +533,41 @@ export const BallotManager = (props: IBallotManagerProps) => {
             </ElectionMetadata>
             <VotersSection>
               <NewBallotContract>Voters section</NewBallotContract>
-              <AddVoterFlex>
-                <TextField
-                  label="Voter Wallet Address"
-                  id="outlined-start-adornment"
-                  sx={{ width: "45%" }}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start"></InputAdornment>
-                    ),
-                  }}
-                />
-                <TextField
-                  label="Voter's Name"
-                  id="outlined-start-adornment"
-                  sx={{ width: "45%" }}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start"></InputAdornment>
-                    ),
-                  }}
-                />
-              </AddVoterFlex>
-              <StyledMUIButton variant="contained" onClick={onAddVoterClick}>
-                Add voter
-              </StyledMUIButton>
+              {electionState === "Created" ? (
+                <AddVoterFlex>
+                  <TextField
+                    label="Voter Wallet Address"
+                    id="outlined-start-adornment"
+                    value={newVoterAddress}
+                    onChange={onNewVoterAddressChange}
+                    sx={{ width: "45%" }}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start"></InputAdornment>
+                      ),
+                    }}
+                  />
+                  <TextField
+                    label="Voter's Name"
+                    id="outlined-start-adornment"
+                    sx={{ width: "45%" }}
+                    value={newVoterName}
+                    onChange={onNewVoterNameChange}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start"></InputAdornment>
+                      ),
+                    }}
+                  />
+                </AddVoterFlex>
+              ) : null}
+
+              {electionState === "Created" ? (
+                <StyledMUIButton variant="contained" onClick={onAddVoterClick}>
+                  Add voter
+                </StyledMUIButton>
+              ) : null}
+
               <TopGridFilter>
                 <EntriesSpan>
                   <p>Show</p>
@@ -410,7 +601,7 @@ export const BallotManager = (props: IBallotManagerProps) => {
               </TopGridFilter>
               <div style={{ width: "100%", minHeight: "30px" }}>
                 <DataGrid
-                  rows={rows}
+                  rows={votersArray}
                   autoHeight
                   columns={columns}
                   pageSize={pageSizeOption}

@@ -98,6 +98,7 @@ export const WelcomePage = () => {
         Greeter.abi,
         ethereumProvider
       );
+
       try {
         const data = await contract.greet();
         console.log("data: ", data);

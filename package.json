@@ -6,9 +6,11 @@
     "@emotion/react": "^11.7.1",
     "@emotion/styled": "^11.6.0",
     "@metamask/detect-provider": "^1.2.0",
+    "@mui/icons-material": "^5.2.5",
     "@mui/material": "^5.2.8",
-    "@mui/styled-engine-sc": "^5.1.0",
     "@mui/styled-engine": "npm:@mui/styled-engine-sc@latest",
+    "@mui/styled-engine-sc": "^5.1.0",
+    "@mui/x-data-grid": "^5.2.2",
     "@nomiclabs/hardhat-ethers": "^2.0.3",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@openzeppelin/contracts": "^4.4.1",
@@ -19,6 +21,7 @@
     "@types/jest": "^27.0.1",
     "@types/node": "^16.7.13",
     "@types/react-router-dom": "^5.3.2",
+    "@types/web3": "^1.2.2",
     "chai": "^4.3.4",
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.5.2",
@@ -29,15 +32,17 @@
     "react-scripts": "5.0.0",
     "styled-components": "^5.3.3",
     "typescript": "^4.4.2",
-    "web-vitals": "^2.1.0"
+    "web-vitals": "^2.1.0",
+    "web3": "^1.7.0",
+    "web3-utils": "^1.6.1"
   },
   "resolutions": {
     "@mui/styled-engine": "npm:@mui/styled-engine-sc@latest"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
+    "start": "react-app-rewired start",
+    "build": "react-app-rewired build",
+    "test": "react-app-rewired test",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -61,6 +66,15 @@
   "devDependencies": {
     "@types/react": "^17.0.38",
     "@types/react-dom": "^17.0.11",
-    "@types/styled-components": "^5.1.19"
+    "@types/styled-components": "^5.1.19",
+    "assert": "^2.0.0",
+    "buffer": "^6.0.3",
+    "crypto-browserify": "^3.12.0",
+    "https-browserify": "^1.0.0",
+    "os-browserify": "^0.3.0",
+    "react-app-rewired": "^2.1.11",
+    "stream-browserify": "^3.0.0",
+    "stream-http": "^3.2.0",
+    "url": "^0.11.0"
   }
 }

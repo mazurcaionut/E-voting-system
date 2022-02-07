@@ -23,13 +23,13 @@ export const StyledButton = styled.button(
     border-radius: 50px;
     text-align: center;
     height: 200px;
-    background-color: yellow;
+    background-color: white;
     border: 20px solid black;
     transition: all 0.5s ease;
 
     &:hover {
-      background-color: blue;
-      border: 20px solid yellow;
+      background-color: black;
+      border: 20px solid white;
       color: white;
     }
   `

@@ -6,7 +6,6 @@ export const TopWrapperComponentRoot = styled.div(
     width: 100vw;
     font-size: large;
     display: flex;
-    font-family: "Roboto", "Helvetica", "Arial", sans-serif !important;
     flex-direction: column;
   `
 );

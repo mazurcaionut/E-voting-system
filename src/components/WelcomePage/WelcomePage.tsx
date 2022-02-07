@@ -2,9 +2,8 @@ import React, { useEffect } from "react";
 import { useState } from "react";
 import Token from "../../artifacts/contracts/Token.sol/Token.json";
 import Greeter from "../../artifacts/contracts/Greeter.sol/Greeter.json";
-import Voting from "../../artifacts/contracts/Voting.sol/Ballot.json";
 import detectEthereumProvider from "@metamask/detect-provider";
-import { ExternalProvider, Web3Provider } from "@ethersproject/providers";
+import { ExternalProvider } from "@ethersproject/providers";
 import { ethers } from "ethers";
 import video from "../../videos/votingVideo.mp4";
 import {
@@ -14,8 +13,6 @@ import {
   WelcomePageRoot,
 } from "./WelcomePage.styles";
 import { useHistory } from "react-router-dom";
-import Web3 from "web3";
-import { AbiItem } from "web3-utils";
 
 const greeterAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 const tokenAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
@@ -29,6 +26,7 @@ export const WelcomePage = () => {
 
   const getBalance = async () => {
     const ethereum = (await detectEthereumProvider()) as ExternalProvider;
+
     if (ethereum.isMetaMask) {
       const [account] = await ethereum.request?.({
         method: "eth_requestAccounts",
@@ -48,7 +46,6 @@ export const WelcomePage = () => {
       const provider = new ethers.providers.Web3Provider(ethereum);
       const signer = provider.getSigner();
       const contract = new ethers.Contract(tokenAddress, Token.abi, signer);
-      await contract.transfer();
       const transation = await contract.transfer(userAccount, parseInt(amount));
       await transation.wait();
       console.log(`${amount} Coins successfully sent to ${userAccount}`);
@@ -71,7 +68,6 @@ export const WelcomePage = () => {
         Greeter.abi,
         ethereumProvider
       );
-
       try {
         const data = await contract.greet();
         console.log("data: ", data);

@@ -1,7 +1,6 @@
 import { CircularProgress } from "@mui/material";
 import { ChangeEvent, useEffect, useState } from "react";
 import { useETHAccount } from "../../customHooks/useETHAccount";
-import { BallotManager } from "../BallotManager/BallotManager";
 import Voting from "../../artifacts/contracts/Voting.sol/Ballot.json";
 import {
   BallotDetailsContainer,
@@ -16,7 +15,7 @@ import {
   StyledMUITextField,
 } from "../BallotManager/BallotManager.styles";
 import Web3 from "web3";
-import { AbiItem } from "web3-utils";
+import { Contract, ethers } from "ethers";
 
 export const Vote = () => {
   const { loadingA } = useETHAccount();
@@ -26,7 +25,7 @@ export const Vote = () => {
   const [ballotName, setBallotName] = useState("");
   const [proposal, setProposal] = useState("");
   const [result, setResult] = useState(0);
-  const [ballotContract, setBallotContract] = useState<any | null>(null);
+  const [ethersContract, setEthersContract] = useState<Contract | null>(null);
   const [electionState, setElectionState] = useState("");
   const [voted, setVoted] = useState(false);
   const [voterName, setVoterName] = useState("");
@@ -34,200 +33,153 @@ export const Vote = () => {
 
   useEffect(() => {
     if (electionFetched) {
-      onWatchVoteEnd();
-      onWatchVoteDone();
-      onWatchVoteStarted();
+      ethersContract?.on("voteStarted", async (data) => {
+        const provider = new ethers.providers.Web3Provider(Web3.givenProvider);
+
+        const ethersContract = new ethers.Contract(
+          ballotAddressToFetch,
+          Voting.abi,
+          provider
+        );
+
+        await updateElectionState(ethersContract);
+        console.log("Vote started: ", data);
+      });
+      ethersContract?.on("voteDone", async (voterAddress) => {
+        var strEventAddress = voterAddress.toString().toLowerCase();
+        var strAccountAddress = senderAccountAddress.toString().toLowerCase();
+
+        console.log(strEventAddress);
+        console.log(strAccountAddress);
+        console.log(strEventAddress.valueOf() == strAccountAddress.valueOf());
+
+        if (strEventAddress.valueOf() == strAccountAddress.valueOf()) {
+          const provider = new ethers.providers.Web3Provider(
+            Web3.givenProvider
+          );
+
+          const ethersContract = new ethers.Contract(
+            ballotAddressToFetch,
+            Voting.abi,
+            provider
+          );
+
+          await updateElectionState(ethersContract);
+        }
+      });
+      ethersContract?.on("voteEnded", async (data) => {
+        const provider = new ethers.providers.Web3Provider(Web3.givenProvider);
+
+        const ethersContract = new ethers.Contract(
+          ballotAddressToFetch,
+          Voting.abi,
+          provider
+        );
+
+        await updateElectionState(ethersContract);
+        await updateFinalResult(ethersContract);
+
+        console.log("Vote ended: ", data);
+      });
+
+      return () => {
+        ethersContract?.removeAllListeners();
+      };
     }
   }, [electionFetched]);
 
-  const onWatchVoteEnd = () => {
-    ballotContract.events
-      .voteEnded(
-        {},
-        async (error: any, event: { returnValues: { finalResult: any } }) => {
-          console.log(event.returnValues.finalResult);
-
-          await updateFinalResult(ballotContract);
-          await updateElectionState(ballotContract);
-        }
-      )
-      .on("data", (event: any) => {})
-      .on("changed", (event: any) => {
-        // remove event from local database
-      })
-      .on("error", console.error);
-  };
-
-  const onWatchVoteStarted = () => {
-    ballotContract.events
-      .voteStarted({}, async (error: any, event: any) => {
-        console.log(event.event); // same results as the optional callback above
-        await updateElectionState(ballotContract);
-      })
-      .on("data", (event: { event: any }) => {})
-      .on("changed", (event: any) => {
-        // remove event from local database
-      })
-      .on("error", console.error);
-  };
-
-  const onWatchVoteDone = () => {
-    ballotContract.events
-      .voteDone(
-        {},
-        async (
-          error: any,
-          event: { returnValues: { voter: { toString: () => string } } }
-        ) => {
-          var strEventAddress = event.returnValues.voter
-            .toString()
-            .toLowerCase();
-          var strAccountAddress = senderAccountAddress.toString().toLowerCase();
-
-          console.log(strEventAddress);
-          console.log(strAccountAddress);
-          console.log(strEventAddress.valueOf() == strAccountAddress.valueOf());
-
-          if (strEventAddress.valueOf() == strAccountAddress.valueOf()) {
-            await updateElectionState(ballotContract);
-          }
-        }
-      )
-      .on("data", (event: any) => {})
-      .on("changed", (event: any) => {
-        // remove event from local database
-      })
-      .on("error", console.error);
-  };
-
   const onOptionChoose = (choice: boolean) => async () => {
-    let mygas = 0;
+    const provider = new ethers.providers.Web3Provider(Web3.givenProvider);
+    const signer = provider.getSigner();
 
-    const web3 = new Web3(Web3.givenProvider || "ws://localhost:8545");
+    const contract = new ethers.Contract(
+      ballotAddressToFetch,
+      Voting.abi,
+      signer
+    );
 
-    const gasPrice = await web3.eth.getGasPrice();
+    const transaction = await contract.doVote(choice);
 
-    await ballotContract?.methods
-      .doVote(choice)
-      .estimateGas({ from: senderAccountAddress })
-      .then((gasAmount: any) => {
-        mygas = gasAmount;
-      });
-
-    await ballotContract.methods
-      .doVote(choice)
-      .send({
-        from: senderAccountAddress,
-        gas: mygas,
-        gasPrice: gasPrice,
-      })
-      .on("transactionHash", (hash: any) => {
-        console.log("a");
-      })
-      .on("receipt", (receipt: any) => {
-        console.log("done");
-      })
-      .on("confirmation", (confirmationNumber: any, receipt: any) => {
-        console.log("c");
-      })
-      .on("error", console.error);
+    await transaction.wait();
   };
 
   const onJoinElectionClick = async () => {
-    console.log("It works bro");
+    const provider = new ethers.providers.Web3Provider(Web3.givenProvider);
 
-    const web3 = new Web3(Web3.givenProvider || "ws://localhost:8545");
-
-    const deployedContract = new web3.eth.Contract(
-      Voting.abi as AbiItem[],
-      ballotAddressToFetch
+    console.log("Ballot address: ", ballotAddressToFetch);
+    const ethersContract = new ethers.Contract(
+      ballotAddressToFetch,
+      Voting.abi,
+      provider
     );
 
-    const accountAddress = web3.givenProvider.selectedAddress;
+    const accountAddress = Web3.givenProvider.selectedAddress;
     setSenderAccountAddress(accountAddress);
+    setEthersContract(ethersContract);
 
-    setBallotContract(deployedContract);
-
-    await updateBallotProposal(deployedContract);
-    await updateBallotOfficialName(deployedContract);
-    await updateFinalResult(deployedContract);
-    await updateElectionState(deployedContract);
+    await updateBallotProposal(ethersContract);
+    await updateBallotOfficialName(ethersContract);
+    await updateFinalResult(ethersContract);
+    await updateElectionState(ethersContract);
 
     setElectionFetched(true);
   };
 
-  const updateElectionState = async (ballot: any) =>
-    await ballot.methods
-      .state()
-      .call()
-      .then(async (newState: any) => {
-        console.log("The new state is : ", newState);
+  const updateElectionState = async (ballot: Contract) => {
+    const newState = await ballot.state();
 
-        setElectionState(
-          parseInt(newState) === 0
-            ? "Created"
-            : parseInt(newState) === 1
-            ? "Voting"
-            : "Ended"
-        );
+    setElectionState(
+      parseInt(newState) === 0
+        ? "Created"
+        : parseInt(newState) === 1
+        ? "Voting"
+        : "Ended"
+    );
 
-        await loadVoter(ballot, senderAccountAddress, parseInt(newState));
-      });
+    await loadVoter(ballot, senderAccountAddress, parseInt(newState));
 
-  const loadVoter = async (ballot: any, voterAddress: string, state: any) =>
-    await ballotContract.methods
-      .voterRegister(voterAddress)
-      .call()
-      .then((result: { voted: any; voterName: any }) => {
-        if (result.voterName != "" && state == 1) {
-          // $("#loaderChoice").hide();
-          // $("#section_voting").show();
+    // console.log("State: ", newState);
+  };
 
-          // $("#lbl_voter").html("<b>Your Name: </b>" + result.voterName);
-          setVoterName(result.voterName);
+  const loadVoter = async (
+    ballot: Contract,
+    voterAddress: string,
+    state: any
+  ) => {
+    const voter = await ballot.voterRegister(voterAddress);
 
-          console.log(result.voted);
+    if (voter.voterName !== "" && state == 1) {
+      setVoterName(voter.voterName);
 
-          setVoted(result.voted);
+      setVoted(voter.voted);
+    } else {
+      setElectionOver(true);
+    }
+  };
 
-          // if (result.voted) {
-          //   $("#btnYes").hide();
-          //   $("#btnNo").hide();
-          //   $("#lblVoted").html(
-          //     "<span class='label label-primary'>Voted</span>"
-          //   );
-          // } else {
-          //   $("#btnYes").show();
-          //   $("#btnNo").show();
-          // }
-        } else {
-          setElectionOver(true);
-        }
-      });
+  const updateFinalResult = async (ballot: Contract) => {
+    const finalResult = await ballot.finalResult();
 
-  const updateFinalResult = async (ballot: any) =>
-    await ballot.methods
-      .finalResult()
-      .call()
-      .then((finalResult: number) => {
-        setResult(finalResult);
-      });
+    setResult(parseInt(finalResult));
 
-  const updateBallotProposal = async (ballot: any) =>
-    await ballot.methods
-      .proposal()
-      .call()
-      .then((newProposal: string) => {
-        setProposal(newProposal);
-      });
+    // console.log("Final result: ", parseInt(finalResult));
+  };
 
-  const updateBallotOfficialName = async (ballot: any) =>
-    await ballot.methods
-      .ballotOfficialName()
-      .call()
-      .then((newBallotName: string) => {
-        setBallotName(newBallotName);
-      });
+  const updateBallotProposal = async (ballot: Contract) => {
+    const newProposal = await ballot.proposal();
+
+    setProposal(newProposal);
+
+    // console.log("Proposal: ", newProposal);
+  };
+
+  const updateBallotOfficialName = async (ballot: Contract) => {
+    const newBallotName = await ballot.ballotOfficialName();
+
+    setBallotName(newBallotName);
+
+    // console.log("Ballot name: ", newBallotName);
+  };
 
   const onBallotAddressToFetch = (
     e: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>

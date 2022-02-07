@@ -151,6 +151,8 @@ export const SpanLines = styled.span<ISpanLine>(
   ({ theme, withButton, doVote }) => css`
     display: flex;
     width: 100%;
+    word-break: break-all;
+    /* white-space: pre-wrap; */
 
     ${withButton &&
     css`
@@ -164,14 +166,19 @@ export const SpanLines = styled.span<ISpanLine>(
 
 
     p:first-of-type {
+      white-space: nowrap;
       font-weight: bold;
       margin-right: 10px;
     }
   `
 );
 
-export const BMCenterSection = styled.div(
-  ({ theme }) => css`
+interface IBallotManager {
+  ballotManager?: boolean;
+}
+
+export const BMCenterSection = styled.div<IBallotManager>(
+  ({ theme, ballotManager }) => css`
     width: 65%;
     height: 100%;
     display: flex;
@@ -179,6 +186,11 @@ export const BMCenterSection = styled.div(
     align-items: flex-start;
     box-sizing: border-box;
     padding: 15px;
+
+    ${ballotManager &&
+    css`
+      width: 75%;
+    `}
   `
 );
 

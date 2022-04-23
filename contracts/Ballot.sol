@@ -21,9 +21,9 @@ contract Ballot {
     uint public totalVote = 0;
     address public ballotOfficialAddress;      
     string public ballotOfficialName;
-    string public proposal;
     
     mapping(uint => vote) private votes;
+    string public proposal;
     mapping(address => voter) public voterRegister;
     
     enum State { Created, Voting, Ended }
@@ -70,6 +70,7 @@ contract Ballot {
         voter memory v;
         v.voterName = _voterName;
         v.voted = false;
+        // Check if the voter already exists when adding
         voterRegister[_voterAddress] = v;
         totalVoter++;
         emit voterAdded(_voterAddress);

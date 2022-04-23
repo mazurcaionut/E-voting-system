@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { useState } from "react";
 import Token from "../../artifacts/contracts/Token.sol/Token.json";
 import Greeter from "../../artifacts/contracts/Greeter.sol/Greeter.json";
-import Voting from "../../artifacts/contracts/Voting.sol/Ballot.json";
+import Voting from "../../artifacts/contracts/Ballot.sol/Ballot.json";
 import detectEthereumProvider from "@metamask/detect-provider";
 import { ExternalProvider, Web3Provider } from "@ethersproject/providers";
 import { ethers } from "ethers";

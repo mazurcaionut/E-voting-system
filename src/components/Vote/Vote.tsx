@@ -1,7 +1,8 @@
 import { CircularProgress } from "@mui/material";
 import { ChangeEvent, useEffect, useState } from "react";
 import { useETHAccount } from "../../customHooks/useETHAccount";
-import Voting from "../../artifacts/contracts/Voting.sol/Ballot.json";
+// import Voting from "../../artifacts/contracts/Ballot.sol/Ballot.json";
+import Voting from "../../artifacts/contracts/BallotImproved.sol/BallotImproved.json";
 import {
   BallotDetailsContainer,
   BallotManagerRoot,
@@ -16,6 +17,8 @@ import {
 } from "../BallotManager/BallotManager.styles";
 import Web3 from "web3";
 import { Contract, ethers } from "ethers";
+import { OptionsWithResults } from "../BallotManager/BallotManager";
+import { password1, password2 } from "../../passwords";
 
 export const Vote = () => {
   const { loadingA } = useETHAccount();
@@ -30,6 +33,7 @@ export const Vote = () => {
   const [voted, setVoted] = useState(false);
   const [voterName, setVoterName] = useState("");
   const [electionOver, setElectionOver] = useState(false);
+  const [options, setOptions] = useState<OptionsWithResults[]>([]);
 
   useEffect(() => {
     if (electionFetched) {
@@ -88,8 +92,9 @@ export const Vote = () => {
     }
   }, [electionFetched]);
 
-  const onOptionChoose = (choice: boolean) => async () => {
+  const onOptionChoose = (choice: string) => async () => {
     const provider = new ethers.providers.Web3Provider(Web3.givenProvider);
+    const web3 = new Web3(Web3.givenProvider || "ws://localhost:8545");
     const signer = provider.getSigner();
 
     const contract = new ethers.Contract(
@@ -98,31 +103,61 @@ export const Vote = () => {
       signer
     );
 
-    const transaction = await contract.doVote(choice);
+    const encodedOption = web3.utils.sha3(
+      web3.eth.abi.encodeParameters(
+        ["string"],
+        [password1.concat(choice, password2)]
+      )
+    );
+
+    const transaction = await contract.doVote(encodedOption);
 
     await transaction.wait();
+  };
+
+  const updateOptions = async (ballot: Contract) => {
+    console.log("Gets in here");
+    // const ballotOptions = await ballot.options(0);
+    const optionsLength = await ballot.optionsLength();
+
+    const optionsArray = await Promise.all(
+      Array.from(Array(parseInt(optionsLength)).keys()).map(async (item) => {
+        const currentBallotOption = await ballot.options(item);
+        return {
+          option: currentBallotOption,
+          score: 0,
+        };
+      })
+    );
+
+    setOptions(optionsArray);
   };
 
   const onJoinElectionClick = async () => {
     const provider = new ethers.providers.Web3Provider(Web3.givenProvider);
 
     console.log("Ballot address: ", ballotAddressToFetch);
-    const ethersContract = new ethers.Contract(
-      ballotAddressToFetch,
-      Voting.abi,
-      provider
-    );
+    try {
+      const ethersContract = new ethers.Contract(
+        ballotAddressToFetch,
+        Voting.abi,
+        provider
+      );
+      const accountAddress = Web3.givenProvider.selectedAddress;
+      setSenderAccountAddress(accountAddress);
+      setEthersContract(ethersContract);
 
-    const accountAddress = Web3.givenProvider.selectedAddress;
-    setSenderAccountAddress(accountAddress);
-    setEthersContract(ethersContract);
+      await updateBallotProposal(ethersContract);
+      await updateBallotOfficialName(ethersContract);
+      await updateFinalResult(ethersContract);
+      await updateElectionState(ethersContract);
+      await updateOptions(ethersContract);
 
-    await updateBallotProposal(ethersContract);
-    await updateBallotOfficialName(ethersContract);
-    await updateFinalResult(ethersContract);
-    await updateElectionState(ethersContract);
-
-    setElectionFetched(true);
+      setElectionFetched(true);
+    } catch (error) {
+      console.error("\n\nError is this", error);
+      // console.log("There is something totally wrong");
+    }
   };
 
   const updateElectionState = async (ballot: Contract) => {
@@ -159,6 +194,20 @@ export const Vote = () => {
 
   const updateFinalResult = async (ballot: Contract) => {
     const finalResult = await ballot.finalResult();
+
+    const finalOutput = await Promise.all(
+      options.map(async (option, index) => {
+        const currentFinalScore = await ballot.finalResults(index);
+
+        return {
+          ...option,
+          score: parseInt(currentFinalScore),
+        };
+      })
+    );
+    // options.map
+
+    setOptions(finalOutput);
 
     setResult(parseInt(finalResult));
 
@@ -242,9 +291,22 @@ export const Vote = () => {
               <p>{proposal}</p>
             </SpanLines>
 
-            <SpanLines>
+            {/* <SpanLines>
               <p>Result: </p>
               <p>{result}</p>
+            </SpanLines> */}
+
+            <SpanLines style={{ alignItems: "center" }}>
+              <p>Result: </p>
+              {/* <p>{result}</p> */}
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {options.map((item) => (
+                  <SpanLines>
+                    <p>{item.option}</p>
+                    <p>{item.score}</p>
+                  </SpanLines>
+                ))}
+              </div>
             </SpanLines>
 
             <SpanLines doVote>
@@ -263,7 +325,15 @@ export const Vote = () => {
               <div
                 style={{ width: "100%", display: "flex", flexDirection: "row" }}
               >
-                <StyledMUIButton
+                {options.map((item) => (
+                  <StyledMUIButton
+                    variant="contained"
+                    onClick={onOptionChoose(item.option)}
+                  >
+                    {item.option}
+                  </StyledMUIButton>
+                ))}
+                {/* <StyledMUIButton
                   color="success"
                   variant="contained"
                   onClick={onOptionChoose(true)}
@@ -277,7 +347,7 @@ export const Vote = () => {
                   sx={{ marginLeft: "10px" }}
                 >
                   No
-                </StyledMUIButton>
+                </StyledMUIButton> */}
               </div>
             )}
           </ContractDetails>

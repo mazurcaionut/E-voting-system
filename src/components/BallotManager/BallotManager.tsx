@@ -33,13 +33,15 @@ import React, {
   useState,
 } from "react";
 import { useETHAccount } from "../../customHooks/useETHAccount";
-import Voting from "../../artifacts/contracts/Voting.sol/Ballot.json";
+// import Voting from "../../artifacts/contracts/Ballot.sol/Ballot.json";
+import Voting from "../../artifacts/contracts/BallotImproved.sol/BallotImproved.json";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 // import Web3 from "web3";
 import { AbiItem } from "web3-utils";
 import Web3 from "web3";
 import { SearchOutlined } from "@mui/icons-material";
 import { Contract, ethers } from "ethers";
+import { password1, password2 } from "../../passwords";
 
 interface IBallotManagerProps {
   voter?: boolean;
@@ -50,6 +52,13 @@ interface IVoter {
   address: string;
   name: string;
   status: string;
+}
+
+type IElection = "none" | "Referendum" | "Candidates";
+
+export interface OptionsWithResults {
+  option: string;
+  score: number;
 }
 
 export const BallotManager = (props: IBallotManagerProps) => {
@@ -68,9 +77,15 @@ export const BallotManager = (props: IBallotManagerProps) => {
   const [votersNumber, setVotersNumber] = useState(0);
   const [votes, setVotes] = useState(0);
   const [pageSizeOption, setPageSizeOption] = useState(5);
+  const [electionType, setElectionType] = useState<IElection>("none");
+  const [options, setOptions] = useState<OptionsWithResults[]>([]);
 
   useEffect(() => {
     if (deployed) {
+      ethersContract?.on("wrongHash", async (data) => {
+        console.log("Hash is not correct");
+      });
+
       ethersContract?.on("voterAdded", async (voterAddress) => {
         const provider = new ethers.providers.Web3Provider(Web3.givenProvider);
 
@@ -148,17 +163,45 @@ export const BallotManager = (props: IBallotManagerProps) => {
   const loadVoter = async (ballot: Contract, voterAddress: string) => {
     const voter = await ballot.voterRegister(voterAddress);
 
-    setVotersArray((votersArray) => [
-      ...votersArray,
-      {
-        id: (votersArray.length + 1).toString(),
-        address: voterAddress,
-        name: voter.voterName,
-        status: voter.voted ? "Voted" : "Not Voted",
-      },
-    ]);
+    setVotersArray((votersArray) =>
+      votersArray.some((arrayVoter) => arrayVoter.address === voterAddress)
+        ? votersArray.map((arrayVoter) =>
+            arrayVoter.address === voterAddress
+              ? {
+                  ...arrayVoter,
+                  name: voter.voterName,
+                }
+              : arrayVoter
+          )
+        : [
+            ...votersArray,
+            {
+              id: (votersArray.length + 1).toString(),
+              address: voterAddress,
+              name: voter.voterName,
+              status: voter.voted ? "Voted" : "Not Voted",
+            },
+          ]
+    );
 
     console.log("Voter: ", voter);
+  };
+
+  const updateOptions = async (ballot: Contract) => {
+    // const ballotOptions = await ballot.options(0);
+    const optionsLength = await ballot.optionsLength();
+
+    const optionsArray = await Promise.all(
+      Array.from(Array(parseInt(optionsLength)).keys()).map(async (item) => {
+        const currentBallotOption = await ballot.options(item);
+        return {
+          option: currentBallotOption,
+          score: 0,
+        };
+      })
+    );
+
+    setOptions(optionsArray);
   };
 
   const updateBallotOfficialName = async (ballot: Contract) => {
@@ -194,6 +237,20 @@ export const BallotManager = (props: IBallotManagerProps) => {
   const updateFinalResult = async (ballot: Contract) => {
     const finalResult = await ballot.finalResult();
 
+    const finalOutput = await Promise.all(
+      options.map(async (option, index) => {
+        const currentFinalScore = await ballot.finalResults(index);
+
+        return {
+          ...option,
+          score: parseInt(currentFinalScore),
+        };
+      })
+    );
+    // options.map
+
+    setOptions(finalOutput);
+
     setResult(parseInt(finalResult));
 
     console.log("Final result: ", parseInt(finalResult));
@@ -225,7 +282,7 @@ export const BallotManager = (props: IBallotManagerProps) => {
       signer
     );
 
-    const transaction = await contract.endVote();
+    const transaction = await contract.endVote(password1, password2);
 
     await transaction.wait();
   };
@@ -244,9 +301,16 @@ export const BallotManager = (props: IBallotManagerProps) => {
       signer
     );
 
-    const transaction = await contract.addVoter(newVoterAddress, newVoterName);
+    try {
+      const transaction = await contract.addVoter(
+        newVoterAddress,
+        newVoterName
+      );
 
-    await transaction.wait();
+      await transaction.wait();
+    } catch (error) {
+      console.log("It didn't work");
+    }
   };
 
   const onStartVoting = async () => {
@@ -271,16 +335,33 @@ export const BallotManager = (props: IBallotManagerProps) => {
     let initialBallotContract = new web3.eth.Contract(Voting.abi as AbiItem[]);
     const accountAddress = web3.givenProvider.selectedAddress;
 
+    const options =
+      electionType === "Referendum" ? ["Yes", "No"] : proposal.split(",");
+
     const gasPrice = await web3.eth.getGasPrice();
     await initialBallotContract
       .deploy({
         data: Voting.bytecode,
-        arguments: [ballotName, proposal],
+        arguments: [
+          ballotName,
+          proposal,
+          options,
+          options.map((item) =>
+            web3.utils.sha3(
+              web3.eth.abi.encodeParameters(
+                ["string"],
+                [password1.concat(item, password2)]
+              )
+            )
+          ),
+        ],
       })
       .send(
         {
           from: accountAddress,
-          gas: 1308700,
+          // gas: 1308700,
+          // gas: 1204553,
+          gas: 6000000,
           gasPrice: gasPrice,
         },
         (error, transactionHash) => {
@@ -315,6 +396,7 @@ export const BallotManager = (props: IBallotManagerProps) => {
         await updateFinalResult(ethersContract);
         await updateTotalVoters(ethersContract);
         await updateTotalVotes(ethersContract);
+        await updateOptions(ethersContract);
 
         setDeployed(true);
         setClicked(false);
@@ -340,6 +422,62 @@ export const BallotManager = (props: IBallotManagerProps) => {
     e: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
   ) => setNewVoterName(e.target.value);
 
+  const testWeb3 = async () => {
+    const web3 = new Web3(Web3.givenProvider || "ws://localhost:8545");
+
+    const provider = new ethers.providers.Web3Provider(Web3.givenProvider);
+
+    const ethersContract = new ethers.Contract(
+      ballotContractAddress,
+      Voting.abi,
+      provider
+    );
+
+    const ballotOptions = await ethersContract.options(0);
+    const optionsLength = await ethersContract.optionsLength();
+    // const ballotOptions = await ethersContract.ballotOfficialName();
+    // const newProposal = await ethersContract.proposal();
+
+    // await Promise.all()
+    console.log("\n\nOptions: ", ballotOptions, "\n\n");
+    console.log("\n\nOptions length: ", parseInt(optionsLength), "\n\n");
+
+    // console.log(
+    //   "Test items: ",
+    //   web3.eth.getStorageAt(ballotContractAddress, 7).then((result) => {
+    //     console.log("\n\nResult: ", result);
+    //     console.log(web3.utils.hexToAscii(result));
+    //   })
+    // );
+
+    // const storageIndex = 0;
+    // const key = web3.utils.keccak256("0".concat("1"));
+
+    // const index =
+    //   "0000000000000000000000000000000000000000000000000000000000000006";
+    // const key =
+    //   "000000000000000000000000000000000000000000000000000000000000000";
+
+    // web3.eth.abi
+
+    // web3.utils.soliditySha3
+    // const storage = web3.utils.keccak256(
+    //   key + index
+    //   // key + index,
+    //   // { encoding: "hex" }
+    //   // { type: "uint", value: "0" }
+    // );
+
+    // console.log(
+    //   "\n\nTest private: ",
+    //   // storage
+    //   web3.eth.getStorageAt(ballotContractAddress, 0).then((result) => {
+    //     console.log(web3.utils.hexToAscii(result));
+    //     console.log("\n\nResult: ", result);
+    //   })
+    // );
+  };
+
   return (
     <BallotManagerRoot>
       <BMCenterSection ballotManager>
@@ -347,34 +485,106 @@ export const BallotManager = (props: IBallotManagerProps) => {
           <>
             <BMTitle>{props.voter ? `Vote` : `Ballot Manager`}</BMTitle>
             <NewBallotContainer>
-              <NewBallotContract>
-                {props.voter ? `Ballot contract` : `New Ballot Contract`}
-              </NewBallotContract>
-              <BallotDetailsContainer>
-                <StyledMUITextField
-                  id="outline-basic"
-                  label={
-                    props.voter ? `Ballot address` : `Ballot official name`
-                  }
-                  variant="outlined"
-                  value={ballotName}
-                  onChange={onBallotNameChange}
-                />
+              {electionType === "none" ? (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "10px",
+                    alignItems: "center",
+                  }}
+                >
+                  <div>Pick the type of election that you want</div>
+                  <div style={{ display: "flex", gap: "15px" }}>
+                    <StyledMUIButton
+                      onClick={() => setElectionType("Referendum")}
+                      variant="contained"
+                    >
+                      Referendum
+                    </StyledMUIButton>
+                    <StyledMUIButton
+                      onClick={() => setElectionType("Candidates")}
+                      variant="contained"
+                    >
+                      Candidates election
+                    </StyledMUIButton>
+                  </div>
+                </div>
+              ) : electionType === "Referendum" ? (
+                <>
+                  <NewBallotContract>
+                    {props.voter ? `Ballot contract` : `New Ballot Contract`}
+                  </NewBallotContract>
 
-                {props.voter ? null : (
-                  <StyledMUITextField
-                    id="outline-basic"
-                    label="Proposal"
-                    variant="outlined"
-                    value={proposal}
-                    onChange={onProposalChange}
-                  />
-                )}
+                  <BallotDetailsContainer>
+                    <StyledMUITextField
+                      id="outline-basic"
+                      label={
+                        props.voter ? `Ballot address` : `Ballot official name`
+                      }
+                      variant="outlined"
+                      value={ballotName}
+                      onChange={onBallotNameChange}
+                    />
 
-                <StyledMUIButton variant="contained" onClick={onDeployClick}>
-                  Deploy
-                </StyledMUIButton>
-              </BallotDetailsContainer>
+                    {props.voter ? null : (
+                      <>
+                        <StyledMUITextField
+                          id="outline-basic"
+                          label="Proposal"
+                          variant="outlined"
+                          value={proposal}
+                          onChange={onProposalChange}
+                        />
+                      </>
+                    )}
+
+                    <StyledMUIButton
+                      variant="contained"
+                      onClick={onDeployClick}
+                    >
+                      Deploy
+                    </StyledMUIButton>
+                  </BallotDetailsContainer>
+                </>
+              ) : (
+                <>
+                  <NewBallotContract>
+                    {props.voter ? `Ballot contract` : `New Ballot Contract`}
+                  </NewBallotContract>
+
+                  <BallotDetailsContainer>
+                    <StyledMUITextField
+                      id="outline-basic"
+                      label={
+                        props.voter ? `Ballot address` : `Ballot official name`
+                      }
+                      variant="outlined"
+                      value={ballotName}
+                      onChange={onBallotNameChange}
+                    />
+
+                    {props.voter ? null : (
+                      <>
+                        <StyledMUITextField
+                          id="outline-basic"
+                          label="Candidates list (add a coma between them)"
+                          variant="outlined"
+                          value={proposal}
+                          onChange={onProposalChange}
+                        />
+                      </>
+                    )}
+
+                    <StyledMUIButton
+                      variant="contained"
+                      onClick={onDeployClick}
+                    >
+                      Deploy
+                    </StyledMUIButton>
+                  </BallotDetailsContainer>
+                </>
+              )}
             </NewBallotContainer>
           </>
         )}
@@ -435,10 +645,21 @@ export const BallotManager = (props: IBallotManagerProps) => {
                 </SpanLines>
               </ContractDetails>
               <ContractDetails>
+                <StyledMUIButton small variant="contained" onClick={testWeb3}>
+                  Test web3
+                </StyledMUIButton>
                 <NewBallotContract>Vote Details</NewBallotContract>
-                <SpanLines>
+                <SpanLines style={{ alignItems: "center" }}>
                   <p>Result: </p>
-                  <p>{result}</p>
+                  {/* <p>{result}</p> */}
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    {options.map((item) => (
+                      <SpanLines>
+                        <p>{item.option}</p>
+                        <p>{item.score}</p>
+                      </SpanLines>
+                    ))}
+                  </div>
                 </SpanLines>
 
                 <SpanLines>

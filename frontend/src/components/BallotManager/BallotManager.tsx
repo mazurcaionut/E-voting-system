@@ -6,6 +6,7 @@ import {
   BMTitle,
   ContractDetails,
   ElectionMetadata,
+  ElectionTypeWrapper,
   EntriesSpan,
   NewBallotContainer,
   NewBallotContract,
@@ -339,6 +340,30 @@ export const BallotManager = (props: IBallotManagerProps) => {
       electionType === "Referendum" ? ["Yes", "No"] : proposal.split(",");
 
     const gasPrice = await web3.eth.getGasPrice();
+
+    const minNumber = 5;
+    const maxNumber = 15;
+
+    const randomNumber =
+      Math.floor(Math.random() * (maxNumber - minNumber + 1)) + minNumber;
+
+    const randomStringsArray = Array.from(Array(randomNumber).keys()).map(
+      (item) => Math.random().toString(36).slice(2, 7)
+    );
+
+    const unshuffledEncryptedOptions = [...randomStringsArray, ...options].map(
+      (currentValue) =>
+        web3.eth.abi.encodeParameters(
+          ["string"],
+          [password1.concat(currentValue, password2)]
+        )
+    );
+
+    const shuffledEncryptedOptions = unshuffledEncryptedOptions
+      .map((value) => ({ value, sort: Math.random() }))
+      .sort((a, b) => a.sort - b.sort)
+      .map(({ value }) => value);
+
     await initialBallotContract
       .deploy({
         data: Voting.bytecode,
@@ -346,14 +371,15 @@ export const BallotManager = (props: IBallotManagerProps) => {
           ballotName,
           proposal,
           options,
-          options.map((item) =>
-            web3.utils.sha3(
-              web3.eth.abi.encodeParameters(
-                ["string"],
-                [password1.concat(item, password2)]
-              )
-            )
-          ),
+          shuffledEncryptedOptions,
+          // options.map((item) =>
+          //   web3.utils.sha3(
+          //     web3.eth.abi.encodeParameters(
+          //       ["string"],
+          //       [password1.concat(item, password2)]
+          //     )
+          //   )
+          // ),
         ],
       })
       .send(
@@ -422,62 +448,6 @@ export const BallotManager = (props: IBallotManagerProps) => {
     e: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
   ) => setNewVoterName(e.target.value);
 
-  const testWeb3 = async () => {
-    const web3 = new Web3(Web3.givenProvider || "ws://localhost:8545");
-
-    const provider = new ethers.providers.Web3Provider(Web3.givenProvider);
-
-    const ethersContract = new ethers.Contract(
-      ballotContractAddress,
-      Voting.abi,
-      provider
-    );
-
-    const ballotOptions = await ethersContract.options(0);
-    const optionsLength = await ethersContract.optionsLength();
-    // const ballotOptions = await ethersContract.ballotOfficialName();
-    // const newProposal = await ethersContract.proposal();
-
-    // await Promise.all()
-    console.log("\n\nOptions: ", ballotOptions, "\n\n");
-    console.log("\n\nOptions length: ", parseInt(optionsLength), "\n\n");
-
-    // console.log(
-    //   "Test items: ",
-    //   web3.eth.getStorageAt(ballotContractAddress, 7).then((result) => {
-    //     console.log("\n\nResult: ", result);
-    //     console.log(web3.utils.hexToAscii(result));
-    //   })
-    // );
-
-    // const storageIndex = 0;
-    // const key = web3.utils.keccak256("0".concat("1"));
-
-    // const index =
-    //   "0000000000000000000000000000000000000000000000000000000000000006";
-    // const key =
-    //   "000000000000000000000000000000000000000000000000000000000000000";
-
-    // web3.eth.abi
-
-    // web3.utils.soliditySha3
-    // const storage = web3.utils.keccak256(
-    //   key + index
-    //   // key + index,
-    //   // { encoding: "hex" }
-    //   // { type: "uint", value: "0" }
-    // );
-
-    // console.log(
-    //   "\n\nTest private: ",
-    //   // storage
-    //   web3.eth.getStorageAt(ballotContractAddress, 0).then((result) => {
-    //     console.log(web3.utils.hexToAscii(result));
-    //     console.log("\n\nResult: ", result);
-    //   })
-    // );
-  };
-
   return (
     <BallotManagerRoot>
       <BMCenterSection ballotManager>
@@ -486,14 +456,7 @@ export const BallotManager = (props: IBallotManagerProps) => {
             <BMTitle>{props.voter ? `Vote` : `Ballot Manager`}</BMTitle>
             <NewBallotContainer>
               {electionType === "none" ? (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "10px",
-                    alignItems: "center",
-                  }}
-                >
+                <ElectionTypeWrapper>
                   <div>Pick the type of election that you want</div>
                   <div style={{ display: "flex", gap: "15px" }}>
                     <StyledMUIButton
@@ -509,7 +472,7 @@ export const BallotManager = (props: IBallotManagerProps) => {
                       Candidates election
                     </StyledMUIButton>
                   </div>
-                </div>
+                </ElectionTypeWrapper>
               ) : electionType === "Referendum" ? (
                 <>
                   <NewBallotContract>
@@ -645,9 +608,6 @@ export const BallotManager = (props: IBallotManagerProps) => {
                 </SpanLines>
               </ContractDetails>
               <ContractDetails>
-                <StyledMUIButton small variant="contained" onClick={testWeb3}>
-                  Test web3
-                </StyledMUIButton>
                 <NewBallotContract>Vote Details</NewBallotContract>
                 <SpanLines style={{ alignItems: "center" }}>
                   <p>Result: </p>

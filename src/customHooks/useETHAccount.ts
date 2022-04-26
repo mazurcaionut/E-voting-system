@@ -4,8 +4,7 @@ import { ExternalProvider } from "@ethersproject/providers";
 import { useHistory } from "react-router-dom";
 
 export const useETHAccount = () => {
-  const [a, setA] = useState(null);
-  const [errorA, setErrorA] = useState(null);
+  const [, setErrorA] = useState(null);
   const [loadingA, setLoadingA] = useState(true);
   const history = useHistory();
 

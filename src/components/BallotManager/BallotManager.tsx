@@ -13,12 +13,10 @@ import {
   SpanLines,
   StyledMUIButton,
   StyledMUITextField,
-  StyledTextField,
   TopGridFilter,
   VotersSection,
 } from "./BallotManager.styles";
 import {
-  Button,
   CircularProgress,
   InputAdornment,
   MenuItem,
@@ -26,13 +24,7 @@ import {
   SelectChangeEvent,
   TextField,
 } from "@mui/material";
-import React, {
-  ChangeEvent,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { ChangeEvent, useEffect, useState } from "react";
 import { useETHAccount } from "../../customHooks/useETHAccount";
 // import Voting from "../../artifacts/contracts/Ballot.sol/Ballot.json";
 import Voting from "../../artifacts/contracts/BallotImproved.sol/BallotImproved.json";
@@ -355,14 +347,16 @@ export const BallotManager = (props: IBallotManagerProps) => {
 
     const unshuffledEncryptedOptions = [...randomStringsArray, ...options].map(
       (currentValue) =>
-        web3.eth.abi.encodeParameters(
-          ["string"],
-          [
-            (process.env.REACT_APP_password1 as string).concat(
-              currentValue,
-              process.env.REACT_APP_password2 as string
-            ),
-          ]
+        web3.utils.sha3(
+          web3.eth.abi.encodeParameters(
+            ["string"],
+            [
+              (process.env.REACT_APP_password1 as string).concat(
+                currentValue,
+                process.env.REACT_APP_password2 as string
+              ),
+            ]
+          )
         )
     );
 
@@ -374,20 +368,7 @@ export const BallotManager = (props: IBallotManagerProps) => {
     await initialBallotContract
       .deploy({
         data: Voting.bytecode,
-        arguments: [
-          ballotName,
-          proposal,
-          options,
-          shuffledEncryptedOptions,
-          // options.map((item) =>
-          //   web3.utils.sha3(
-          //     web3.eth.abi.encodeParameters(
-          //       ["string"],
-          //       [password1.concat(item, password2)]
-          //     )
-          //   )
-          // ),
-        ],
+        arguments: [ballotName, proposal, options, shuffledEncryptedOptions],
       })
       .send(
         {

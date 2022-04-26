@@ -18,7 +18,6 @@ import {
 import Web3 from "web3";
 import { Contract, ethers } from "ethers";
 import { OptionsWithResults } from "../BallotManager/BallotManager";
-import { password1, password2 } from "../../passwords";
 
 export const Vote = () => {
   const { loadingA } = useETHAccount();
@@ -106,7 +105,12 @@ export const Vote = () => {
     const encodedOption = web3.utils.sha3(
       web3.eth.abi.encodeParameters(
         ["string"],
-        [password1.concat(choice, password2)]
+        [
+          (process.env.REACT_APP_password1 as string).concat(
+            choice,
+            process.env.REACT_APP_password2 as string
+          ),
+        ]
       )
     );
 

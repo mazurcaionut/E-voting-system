@@ -42,7 +42,6 @@ import { AbiItem } from "web3-utils";
 import Web3 from "web3";
 import { SearchOutlined } from "@mui/icons-material";
 import { Contract, ethers } from "ethers";
-import { password1, password2 } from "../../passwords";
 
 interface IBallotManagerProps {
   voter?: boolean;
@@ -283,7 +282,10 @@ export const BallotManager = (props: IBallotManagerProps) => {
       signer
     );
 
-    const transaction = await contract.endVote(password1, password2);
+    const transaction = await contract.endVote(
+      process.env.REACT_APP_password1,
+      process.env.REACT_APP_password2
+    );
 
     await transaction.wait();
   };
@@ -355,7 +357,12 @@ export const BallotManager = (props: IBallotManagerProps) => {
       (currentValue) =>
         web3.eth.abi.encodeParameters(
           ["string"],
-          [password1.concat(currentValue, password2)]
+          [
+            (process.env.REACT_APP_password1 as string).concat(
+              currentValue,
+              process.env.REACT_APP_password2 as string
+            ),
+          ]
         )
     );
 

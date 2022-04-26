@@ -1,6 +1,15 @@
 import { Button, TextField } from "@mui/material";
 import styled, { css } from "styled-components";
 
+export const ElectionTypeWrapper = styled.div(
+  ({ theme }) => css`
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+  `
+);
+
 export const VotersSection = styled.div(
   ({ theme }) => css`
     display: flex;
@@ -242,5 +251,14 @@ export const StyledTextField = styled(TextField)(
   ({ theme }) => css`
     margin-top: 5px;
     margin-bottom: 5px;
+  `
+);
+
+export const OptionButtonsContainer = styled.div(
+  ({ theme }) => css`
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    gap: 15px;
   `
 );

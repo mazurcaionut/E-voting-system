@@ -1,7 +1,6 @@
 import { CircularProgress } from "@mui/material";
 import { ChangeEvent, useEffect, useState } from "react";
 import { useETHAccount } from "../../customHooks/useETHAccount";
-// import Voting from "../../artifacts/contracts/Ballot.sol/Ballot.json";
 import Voting from "../../artifacts/contracts/BallotImproved.sol/BallotImproved.json";
 import {
   BallotDetailsContainer,
@@ -11,6 +10,7 @@ import {
   ContractDetails,
   NewBallotContainer,
   NewBallotContract,
+  OptionButtonsContainer,
   SpanLines,
   StyledMUIButton,
   StyledMUITextField,
@@ -137,12 +137,19 @@ export const Vote = () => {
     const provider = new ethers.providers.Web3Provider(Web3.givenProvider);
 
     console.log("Ballot address: ", ballotAddressToFetch);
+    // const signer = provider.getSigner();
+
+    if (ballotAddressToFetch === "" || !ballotAddressToFetch) {
+      return;
+    }
+
     try {
       const ethersContract = new ethers.Contract(
         ballotAddressToFetch,
         Voting.abi,
         provider
       );
+
       const accountAddress = Web3.givenProvider.selectedAddress;
       setSenderAccountAddress(accountAddress);
       setEthersContract(ethersContract);
@@ -322,33 +329,23 @@ export const Vote = () => {
                 <p>{voted}</p>
               </SpanLines>
             ) : (
-              <div
-                style={{ width: "100%", display: "flex", flexDirection: "row" }}
-              >
+              <OptionButtonsContainer>
                 {options.map((item) => (
                   <StyledMUIButton
                     variant="contained"
                     onClick={onOptionChoose(item.option)}
+                    color={
+                      item.option === "Yes"
+                        ? "success"
+                        : item.option === "No"
+                        ? "error"
+                        : "primary"
+                    }
                   >
                     {item.option}
                   </StyledMUIButton>
                 ))}
-                {/* <StyledMUIButton
-                  color="success"
-                  variant="contained"
-                  onClick={onOptionChoose(true)}
-                >
-                  Yes
-                </StyledMUIButton>
-                <StyledMUIButton
-                  color="error"
-                  variant="contained"
-                  onClick={onOptionChoose(false)}
-                  sx={{ marginLeft: "10px" }}
-                >
-                  No
-                </StyledMUIButton> */}
-              </div>
+              </OptionButtonsContainer>
             )}
           </ContractDetails>
         )}

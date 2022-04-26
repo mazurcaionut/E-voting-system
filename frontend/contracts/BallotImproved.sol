@@ -46,9 +46,12 @@ contract BallotImproved {
 
         optionsLength = _choices.length;
 
+        for(uint i = 0; i < _choices.length; i++) {
+            options.push(_choices[i]);
+        }
+
         for(uint i = 0; i < _encryptedChoices.length; i++) {
             countResults[_encryptedChoices[i]] = 0;
-            options.push(_choices[i]);
         }
         
         state = State.Created;
@@ -147,9 +150,6 @@ contract BallotImproved {
         for(uint i = 0; i < options.length; i++) {
             bytes32 optionHash = hash(append(append(_password1, options[i]), _password2));
             finalResults.push(countResults[optionHash]);
-            // finalResults[_choices[i]] = 0;
-            // uint value = hash(_password1 . i . _password2);
-            // options.push(_choices[i]);
             if(countResults[optionHash] != 0) {
                 count++;
             }
@@ -161,10 +161,5 @@ contract BallotImproved {
             state = State.Ended;
             emit voteEnded(finalResults);
         }
-        // countResults[_electionCommit] = 0;
-        // for(uint i = 0; i < _options.length; i++) {
-        //     countResults[_options[i]] = 0;
-        // }
-        // finalResult = countResult; //move result from private countResult to public finalResult
     }
 }

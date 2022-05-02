@@ -1,15 +1,23 @@
-# Basic Sample Hardhat Project
+# Decentralized E-Voting System
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, a sample script that deploys that contract, and an example of a task implementation, which simply lists the available accounts.
+This project showcases a decentralized e-voting application using blokchain. Solidity was the language used to write the smart smart contracts, while React was the chosen web framework. The connection between the components of the infrastrcture is performed using the libraries Hardhat, Web3.js and Ethers.js.
 
-Try running some of the following tasks:
+In order to perform the setup and run the project type in the following commands:
 
 ```shell
-npx hardhat accounts
-npx hardhat compile
-npx hardhat clean
-npx hardhat test
-npx hardhat node
-node scripts/sample-script.js
-npx hardhat help
+curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+sudo apt install git
+sudo apt install yarn
+sudo apt update
+git checkout development
+yarn install
+yarn start
+```
+
+Additionally, to compile the smart contracts or generate test accounts for local development try these commands:
+
+```shell
+yarn hardhat compile
+yarn hardhat node
 ```

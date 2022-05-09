@@ -1,6 +1,6 @@
 # Decentralized E-Voting System
 
-This project showcases a decentralized e-voting application using blokchain. Solidity was the language used to write the smart smart contracts, while React was the chosen web framework. The connection between the components of the infrastrcture is performed using the libraries Hardhat, Web3.js and Ethers.js.
+This project showcases a decentralized e-voting application using blokchain. Solidity was the language used to write the smart contracts, while React was the chosen web framework. The connection between the components of the infrastructure is performed using the libraries Hardhat, Web3.js and Ethers.js.
 
 In order to perform the setup and run the project type in the following commands:
 
